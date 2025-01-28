@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Verisi</title>
+    <style>
+        /* Flexbox ile tabloları yan yana yerleştirme */
+        .tables-container {
+            display: flex;
+            justify-content: space-evenly; /* Tablo arasında eşit boşluk bırak */
+            margin-top: 50px;
+            flex-wrap: wrap; /* Tablo ve grafiklerin sığabilmesi için */
+        }
+
+        table {
+            margin: 0 10px;
+            border-collapse: collapse;
+        }
+
+        /* İlk tabloyu büyütüyoruz */
+        .table-large {
+            width: 35%; /* İlk tabloya daha fazla genişlik ver */
+        }
+
+        /* Diğer iki tabloyu küçültüyoruz */
+        .table-small {
+            width: 30%; /* Diğer tabloları küçült */
+        }
+
+        th, td {
+            padding: 7px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        .hidden {
+            display: none;
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+
+        /* Grafik için stil */
+        .chart-container {
+            display: flex;
+            justify-content: space-evenly;
+            margin-top: 50px;
+            margin-bottom: 50px;
+            width: 100%;
+        }
+
+        .chart-container canvas {
+            width: 300px !important;
+            height: 300px !important;
+        }
+    </style>
+    <!-- Chart.js Kütüphanesini Dahil Etme -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+</head>
+<body>
+    <h1 style="text-align: center;">Excel Verisi</h1>
+
+    <!-- Tablo kapsayıcı (container) -->
+    <div class="tables-container">
+        <!-- Ana gelir türleri tablosu (Büyük) -->
+        <table class="table-large" id="mainTable1">
+            <thead>
+                <tr>
+                    <th>Gelir Türü</th>
+                    <th>Değer (€)</th>
+                    <th>Yüzde (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="aviationRevenue">
+                    <td>Havacılık Gelirleri</td>
+                    <td>{{ data.c21_value }} €</td>
+                    <td>% {{ data.c21_value_yuzde }} </td>
+                </tr>
+                <tr id="rentalIncome">
+                    <td>Toplam Kira Geliri</td>
+                    <td>{{ data.toplam_kira_geliri }} €</td>
+                    <td>% {{ data.toplam_kira_geliri_yuzde }} </td>
+                </tr>
+                <tr>
+                    <td>Toplam Gelir</td>
+                    <td>{{ data.toplam_deger }} €</td>
+                    <td>% 100 </td>
+                </tr>
+            </tbody>
+        </table>
+        
+
+        <!-- Gelen ve Giden Yolcular Tablosu (Küçük) -->
+        <table class="table-small" id="mainTable2">
+            <thead>
+                <tr>
+                    <th>Gelen Yolcu Sayısı</th>
+                    <th>Giden Yolcu Sayısı</th>
+                </tr>
+                <tr>
+                    <td>{{ data.m62_value }}</td>
+                    <td>{{ data.m78_value }}</td>
+                </tr>
+            </thead>
+        </table>
+
+        <!-- Gelen ve Giden Uçaklar Tablosu (Küçük) -->
+        <table class="table-small" id="mainTable3">
+            <thead>
+                <tr>
+                    <th>Gelen Uçak Sayısı</th>
+                    <th>Giden Uçak Sayısı</th>
+                </tr>
+                <tr>
+                    <td>{{ data.z78_value }}</td>
+                    <td>{{ data.z62_value }}</td>
+                </tr>
+            </thead>
+        </table>
+    </div>
+
+    <!-- Grafik Kapsayıcıları -->
+    <div class="chart-container">
+        <div class="chart-item">
+            <canvas id="myPieChart1"></canvas>
+        </div>
+        <div class="chart-item">
+            <canvas id="myPieChart2"></canvas>
+        </div>
+        <div class="chart-item">
+            <canvas id="myPieChart3"></canvas>
+        </div>
+    </div>
+
+    <!-- JavaScript Kodları -->
+    <script>
+        // Python'dan gelen verilerle yüzdelik hesaplamayı burada yapıyoruz
+        var c21ValueYuzde = parseFloat("{{ data.c21_value_yuzde | replace('%', '') }}");
+        var toplamKiraGeliriYuzde = parseFloat("{{ data.toplam_kira_geliri_yuzde | replace('%', '') }}");
+        var gelenYolcuSayisi = parseFloat("{{ data.m62_value }}");
+        var gidenYolcuSayisi = parseFloat("{{ data.m78_value }}");
+        var gelenUcakSayisi = parseFloat("{{ data.z78_value }}");
+        var gidenUcakSayisi = parseFloat("{{ data.z62_value }}");
+
+        // Chart.js ile Pasta Grafiği Oluşturma
+        function createPieChart(chartId, labels, dataValues) {
+            var ctx = document.getElementById(chartId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,  // Etiketler
+                    datasets: [{
+                        label: 'Yüzdeler',
+                        data: dataValues,  // Yüzdeler
+                        backgroundColor: ['#ff6384', '#36a2eb'],  // Renkler
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    return tooltipItem.label + ': ' + tooltipItem.raw.toFixed(2) + '%';  // Yüzdeyi formatla
+                                }
+                            }
+                        },
+                        // Yüzdeleri dilimlerin üstüne ekleme
+                        datalabels: {
+                            display: true,
+                            color: 'white', // Yüzdelerin rengi
+                            font: {
+                                weight: 'bold',
+                                size: 16
+                            },
+                            formatter: function(value, ctx) {
+                                var sum = ctx.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                                var percentage = Math.round((value / sum) * 100);
+                                return percentage + '%'; // Yüzdeyi döndür
+                            }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]  // Yüzde yazdırmak için gerekli plugin
+            });
+        }
+
+        // Pasta Grafiklerini Oluştur
+        createPieChart('myPieChart1', ['Havacılık Gelirleri', 'Kira Geliri'], [c21ValueYuzde, toplamKiraGeliriYuzde]);
+        createPieChart('myPieChart2', ['Gelen Yolcular', 'Giden Yolcular'], [gelenYolcuSayisi, gidenYolcuSayisi]);
+        createPieChart('myPieChart3', ['Gelen Uçaklar', 'Giden Uçaklar'], [gelenUcakSayisi, gidenUcakSayisi]);
+
+        
+    </script>
+</body>
+</html>
